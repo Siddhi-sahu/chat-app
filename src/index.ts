@@ -1,11 +1,18 @@
 
-import { server as WebSocketServer } from "websocket"
+import { connection, server as WebSocketServer } from "websocket"
 import http from 'http';
+import { IncomingMessage, supportedMessage } from "./messages";
+import { UserManager } from "./UserManager";
+import { InMemoryStore } from "./store/inMemoryStore";
 const server = http.createServer(function (request: any, response: any) {
     console.log((new Date()) + ' Received request for ' + request.url);
     response.writeHead(404);
     response.end();
 });
+
+const userManager = new UserManager();
+const store = new InMemoryStore();
+
 server.listen(8080, function () {
     console.log((new Date()) + ' Server is listening on port 8080');
 });
@@ -32,7 +39,7 @@ wsServer.on('request', function (request) {
     connection.on('message', function (message) {
         if (message.type === 'utf8') {
             try {
-                messageHandler(JSON.parse(message.utf8Data))
+                messageHandler(connection, JSON.parse(message.utf8Data))
 
             } catch (e) {
 
@@ -48,6 +55,10 @@ wsServer.on('request', function (request) {
     });
 });
 
-function messageHandler(message) {
+function messageHandler(ws: connection, message: IncomingMessage) {
+    if (message.type == supportedMessage.JoinRoom) {
+        const payload = message.payload;
+        userManager.addUser(payload.name, payload.roomId, payload.userId, ws)
+    }
 
 }
