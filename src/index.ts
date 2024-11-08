@@ -1,7 +1,7 @@
 
 import { connection, server as WebSocketServer } from "websocket"
 import http from 'http';
-import { IncomingMessage, supportedMessage } from "./messages";
+import { IncomingMessage, supportedMessage } from "./messages/incomingMessages";
 import { UserManager } from "./UserManager";
 import { InMemoryStore } from "./store/inMemoryStore";
 const server = http.createServer(function (request: any, response: any) {
@@ -59,6 +59,20 @@ function messageHandler(ws: connection, message: IncomingMessage) {
     if (message.type == supportedMessage.JoinRoom) {
         const payload = message.payload;
         userManager.addUser(payload.name, payload.roomId, payload.userId, ws)
+    }
+    if (message.type == supportedMessage.SendMessage) {
+        const payload = message.payload;
+        const user = userManager.getUser(payload.roomId, payload.userId);
+        if (!user) {
+            console.log("User not found");
+            return;
+        }
+        store.addChat(payload.userId, payload.roomId, payload.message, user.name)
+    }
+
+    if (message.type == supportedMessage.UpvoteMessage) {
+        const payload = message.payload;
+        store.upvote(payload.userId, payload.chatId, payload.roomId)
     }
 
 }
