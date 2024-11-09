@@ -4,6 +4,8 @@ import http from 'http';
 import { IncomingMessage, supportedMessage } from "./messages/incomingMessages";
 import { UserManager } from "./UserManager";
 import { InMemoryStore } from "./store/inMemoryStore";
+import { SupportedMessage as OutgoingSupportedMessage } from "./messages/outgoingMessages";
+import { string } from "zod";
 const server = http.createServer(function (request: any, response: any) {
     console.log((new Date()) + ' Received request for ' + request.url);
     response.writeHead(404);
@@ -67,12 +69,26 @@ function messageHandler(ws: connection, message: IncomingMessage) {
             console.log("User not found");
             return;
         }
-        store.addChat(payload.userId, payload.roomId, payload.message, user.name)
+        store.addChat(payload.userId, payload.roomId, payload.message, user.name);
+        //broadcast logic
+        const outgoingPayload = {
+            type: OutgoingSupportedMessage.AddChat,
+            payload: {
+                type: OutgoingSupportedMessage.AddChat,
+                payload: {
+                    roomId: payload.roomId,
+                    message: payload.message,
+                    name: user.name,
+                    upvotes: 0
+                }
+            }
+        }
+        userManager.broadcast(payload.userId, payload.roomId, outgoingPayload)
     }
 
     if (message.type == supportedMessage.UpvoteMessage) {
         const payload = message.payload;
-        store.upvote(payload.userId, payload.chatId, payload.roomId)
+        store.upvote(payload.userId, payload.chatId, payload.roomId);
     }
 
 }
