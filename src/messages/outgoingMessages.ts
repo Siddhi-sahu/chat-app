@@ -8,7 +8,8 @@ type MessagePayload = {
     roomId: string;
     message: string;
     name: string;
-    upvotes: number
+    upvotes: number;
+    chatId: string;
 }
 
 export type OutgoingMessage = {

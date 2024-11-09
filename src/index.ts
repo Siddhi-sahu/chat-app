@@ -4,7 +4,7 @@ import http from 'http';
 import { IncomingMessage, supportedMessage } from "./messages/incomingMessages";
 import { UserManager } from "./UserManager";
 import { InMemoryStore } from "./store/inMemoryStore";
-import { SupportedMessage as OutgoingSupportedMessage } from "./messages/outgoingMessages";
+import { SupportedMessage as OutgoingSupportedMessage, OutgoingMessage } from "./messages/outgoingMessages";
 import { string } from "zod";
 const server = http.createServer(function (request: any, response: any) {
     console.log((new Date()) + ' Received request for ' + request.url);
@@ -21,7 +21,7 @@ server.listen(8080, function () {
 const wsServer = new WebSocketServer({
     httpServer: server,
 
-    autoAcceptConnections: false
+    autoAcceptConnections: true
 });
 function originIsAllowed(origin: string) {
 
@@ -69,26 +69,44 @@ function messageHandler(ws: connection, message: IncomingMessage) {
             console.log("User not found");
             return;
         }
-        store.addChat(payload.userId, payload.roomId, payload.message, user.name);
+        let chat = store.addChat(payload.userId, payload.roomId, payload.message, user.name);
+        if (!chat) {
+            console.log("Chat not found")
+            return;
+        }
         //broadcast logic
-        const outgoingPayload = {
+        const outgoingPayload: OutgoingMessage = {
             type: OutgoingSupportedMessage.AddChat,
             payload: {
-                type: OutgoingSupportedMessage.AddChat,
-                payload: {
-                    roomId: payload.roomId,
-                    message: payload.message,
-                    name: user.name,
-                    upvotes: 0
-                }
+                chatId: chat.id,
+                roomId: payload.roomId,
+                message: payload.message,
+                name: user.name,
+                upvotes: 0
             }
+
         }
         userManager.broadcast(payload.userId, payload.roomId, outgoingPayload)
     }
 
     if (message.type == supportedMessage.UpvoteMessage) {
         const payload = message.payload;
-        store.upvote(payload.userId, payload.chatId, payload.roomId);
+        const chat = store.upvote(payload.userId, payload.chatId, payload.roomId);
+        if (!chat) {
+            return;
+        }
+        //broadcast logic
+        const outgoingPayload: OutgoingMessage = {
+            type: OutgoingSupportedMessage.UpdateChat,
+            payload: {
+                chatId: payload.chatId,
+                roomId: payload.roomId,
+                upvotes: chat.upvotes.length
+            }
+
+        }
+
+        userManager.broadcast(payload.userId, payload.roomId, outgoingPayload)
     }
 
 }
