@@ -5,7 +5,7 @@ import { IncomingMessage, supportedMessage } from "./messages/incomingMessages";
 import { UserManager } from "./UserManager";
 import { InMemoryStore } from "./store/inMemoryStore";
 import { SupportedMessage as OutgoingSupportedMessage, OutgoingMessage } from "./messages/outgoingMessages";
-import { string } from "zod";
+
 const server = http.createServer(function (request: any, response: any) {
     console.log((new Date()) + ' Received request for ' + request.url);
     response.writeHead(404);
@@ -28,6 +28,7 @@ function originIsAllowed(origin: string) {
     return true;
 }
 wsServer.on('request', function (request) {
+    console.log("inside connect")
     if (!originIsAllowed(request.origin)) {
         // Make sure we only accept requests from an allowed origin
         request.reject();
@@ -39,8 +40,10 @@ wsServer.on('request', function (request) {
     var connection = request.accept('echo-protocol', request.origin);
     console.log((new Date()) + ' Connection accepted.');
     connection.on('message', function (message) {
+        console.log(message)
         if (message.type === 'utf8') {
             try {
+                console.log("indie with message", message.utf8Data)
                 messageHandler(connection, JSON.parse(message.utf8Data))
 
             } catch (e) {
@@ -58,6 +61,7 @@ wsServer.on('request', function (request) {
 });
 
 function messageHandler(ws: connection, message: IncomingMessage) {
+    console.log("incoming message" + JSON.stringify(message))
     if (message.type == supportedMessage.JoinRoom) {
         const payload = message.payload;
         userManager.addUser(payload.name, payload.roomId, payload.userId, ws)
